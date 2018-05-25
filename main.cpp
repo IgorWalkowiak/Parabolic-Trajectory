@@ -35,9 +35,8 @@ int jacX (double t, const double y[], double *dfdy,
     double Wx=*((double *)params+3);
     double Wy=*((double *)params+4);
     double x=*((double *)params+5);
-    //double x=-mu*(Ux-Wx)*(Ux-Wx)/sqrt((Ux-Wx)(Ux-Wx)+(Uy-Wy)*(Uy-Wy))-mu*sqrt((Ux-Wx)*(Ux-Wx)+(Uy-Wy)*(Uy-Wy))
-  gsl_matrix_view dfdy_mat
-    = gsl_matrix_view_array (dfdy, 2, 2);
+
+  gsl_matrix_view dfdy_mat = gsl_matrix_view_array (dfdy, 2, 2);
   gsl_matrix * m = &dfdy_mat.matrix;
   gsl_matrix_set (m, 0, 0, 0.0);
   gsl_matrix_set (m, 0, 1, 1.0);
@@ -130,8 +129,8 @@ int main (void)
 
 
 
-    std::fstream plik;
-    plik.open( "nazwa_pliku.txt", std::ios::out );
+    std::fstream file;
+	file.open( "data.txt", std::ios::out );
     if( plik.good() == true )
     {
         std::cout << "Uzyskano dostep do pliku!" << std::endl;
@@ -143,19 +142,19 @@ int main (void)
   for (int i = 1; i <= 10000; i++)
     {
 
-        int s= gsl_odeiv2_driver_apply_fixed_step(X,&t,1e-5,100,x);
+        int s = gsl_odeiv2_driver_apply_fixed_step(X,&t,1e-5,100,x);
         par[1]=x[1];
 
-        if (s != GSL_SUCCESS)
+        if(s != GSL_SUCCESS)
         {
           printf ("error: driver returned %d\n", s);
           break;
         }
 
-        s= gsl_odeiv2_driver_apply_fixed_step(Y,&t,1e-5,100,y);
+        s = gsl_odeiv2_driver_apply_fixed_step(Y,&t,1e-5,100,y);
         par[2]=y[1];
 
-        if (s != GSL_SUCCESS)
+        if(s != GSL_SUCCESS)
         {
             printf ("error: driver returned %d\n", s);
             break;
@@ -164,125 +163,12 @@ int main (void)
         if(y[0]<=0) break;
 
 
-    plik<<t<<" "<<y[0]<<" "<<y[1]<<" "<<x[0]<<" "<<x[1]<<"\n";
+		file<<t<<" "<<y[0]<<" "<<y[1]<<" "<<x[0]<<" "<<x[1]<<"\n";
 
     }
    gsl_odeiv2_driver_free (Y);
 
   return 0;
 }
-
-
-
-/*
-#include <stdio.h>
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_odeiv2.h>
-#include <iostream>
-#include <math.h>
-
-const double G=9.80665;
-double B=1.0;
-
-int funcX (double t, const double y[], double f[], void *params)
-{
-  (void)(t);
-  double mu = *(double *)params;
-  f[0] = y[1];
-  f[1] = -mu*y[1];
-  return GSL_SUCCESS;
-}
-
-int jacX (double t, const double y[], double *dfdy,
-     double dfdt[], void *params)
-{
-  (void)(t);
-  double mu = *(double *)params;
-  gsl_matrix_view dfdy_mat
-    = gsl_matrix_view_array (dfdy, 2, 2);
-  gsl_matrix * m = &dfdy_mat.matrix;
-  gsl_matrix_set (m, 0, 0, 0.0);
-  gsl_matrix_set (m, 0, 1, 1.0);
-  gsl_matrix_set (m, 1, 0, -mu);
-  gsl_matrix_set (m, 1, 1, 0);
-  dfdt[0] = 0.0;
-  dfdt[1] = 0.0;
-  return GSL_SUCCESS;
-}
-
-//___________Y_______________
-
-int funcY (double t, const double y[], double f[], void *params)
-{
-  (void)(t);
-  double mu = *(double *)params;
-  f[0] = y[1];
-  f[1] = -G-mu*y[1];
-  return GSL_SUCCESS;
-}
-
-int jacY (double t, const double y[], double *dfdy,
-     double dfdt[], void *params)
-{
-  (void)(t);
-  double mu = *(double *)params;
-  gsl_matrix_view dfdy_mat
-    = gsl_matrix_view_array (dfdy, 2, 2);
-  gsl_matrix * m = &dfdy_mat.matrix;
-  gsl_matrix_set (m, 0, 0, 0.0);
-  gsl_matrix_set (m, 0, 1, 1.0);
-  gsl_matrix_set (m, 1, 0, -mu);
-  gsl_matrix_set (m, 1, 1, 0);
-  dfdt[0] = 0.0;
-  dfdt[1] = 0.0;
-  return GSL_SUCCESS;
-}
-
-
-
-int main (void)
-{
-
-    double kat=1.1;
-    double predkosc=50;
-
-    double mu = 0.5;
-
-    double t = 0.0, t1 = 10.0;
-    double x[2] = { 0.0, predkosc*cos(kat) };
-    double y[2] = { 0.0, predkosc*sin(kat) };
-    int j;
-
-        gsl_odeiv2_system sysX = {funcX, jacX, 2, &mu};
-        gsl_odeiv2_driver * X = gsl_odeiv2_driver_alloc_y_new(&sysX, gsl_odeiv2_step_rk8pd,1e-6, 1e-6, 0.0);
-
-        gsl_odeiv2_system sysY = {funcY, jacY, 2, &mu};
-        gsl_odeiv2_driver * Y = gsl_odeiv2_driver_alloc_y_new(&sysY, gsl_odeiv2_step_rk8pd,1e-6, 1e-6, 0.0);
-
-  for (int i = 1; i <= 1000; i++)
-    {
-
-        int s= gsl_odeiv2_driver_apply_fixed_step(X,&t,1e-5,1000,x);
-          s= gsl_odeiv2_driver_apply_fixed_step(Y,&t,1e-5,1000,y);
-
-
-         gsl_odeiv2_driver_reset(Y);
-
-
-
-
-    std::cout<<t<<" "<<y[0]<<" "<<y[1]<<" "<<x[0]<<" "<<x[1]<<"\n";
-    if(y[0]<0){j=i;break;}
-    }
-   gsl_odeiv2_driver_free (Y);
-
-  return 0;
-}
-
-
-*/
-
-
 
 

@@ -4,9 +4,10 @@
 #include <gsl/gsl_odeiv2.h>
 #include <iostream>
 #include <math.h>
+#include <fstream>
+
 
 const double G=9.80665;
-double B=1.0;
 
 int funcX (double t, const double y[], double f[], void *params)
 {
@@ -73,7 +74,6 @@ int jacY (double t, const double y[], double *dfdy,
     double Uy=*((double *)params+2);
     double Wx=*((double *)params+3);
     double Wy=*((double *)params+4);
-    double x=*((double *)params+5);
   gsl_matrix_view dfdy_mat = gsl_matrix_view_array (dfdy, 2, 2);
   gsl_matrix * m = &dfdy_mat.matrix;
   gsl_matrix_set (m, 0, 0, 0.0);
@@ -94,12 +94,16 @@ int main (void)
     double Upredkosc=30;
     double Wkat=170;
     double Wpredkosc=3;
-   /*   std::cout<<"Podaj predkosc poczatkowa i kat w stopniach";
-        std::cin>>Upredkosc>>Ukat;
 
-        std::cout<<"Podaj predkosc wiatru i kat w stopniach";
-        std::cin>>Wpredkosc>>Wkat;
-    */
+        std::cout<<"Podaj predkosc poczatkowa ";
+        std::cin>>Upredkosc;
+        std::cout<<"Podaj kat wektora predkosc od poziomu w stopniach ";
+        std::cin>>Ukat;
+
+        std::cout<<"Podaj predkosc wiatru ";
+        std::cin>>Wpredkosc;
+        std::cout<<"Podaj kat wektora predkosc wiatru od poziomu w stopniach ";
+        std::cin>>Wkat;
 
 
     Ukat=Ukat*0.017453;
@@ -112,18 +116,11 @@ int main (void)
     double Wx=Wpredkosc*cos(Wkat);
     double Wy=Wpredkosc*sin(Wkat);
 
-    double Fx=-k*sqrt((Ux-Wx)*(Ux-Wx)+(Uy-Wy)*(Uy-Wy))*(Ux-Wx);
-    double Fy=-k*sqrt((Ux-Wx)*(Ux-Wx)+(Uy-Wy)*(Uy-Wy))*(Uy-Wy);
 
-
-
-    double par[6] = {k, Ux, Uy, Wx, Wy,1};
-    //par[5]=-k*(Ux-Wx)*(Ux-Wx)/sqrt((Ux-Wx)*(Ux-Wx)+(Uy-Wy)*(Uy-Wy))-k*sqrt((Ux-Wx)*(Ux-Wx)+(Uy-Wy)*(Uy-Wy));
-    //par[6]=-k*(Uy-Wy)*(Uy-Wy)/sqrt((Ux-Wx)*(Ux-Wx)+(Uy-Wy)*(Uy-Wy))-k*sqrt((Ux-Wx)*(Ux-Wx)+(Uy-Wy)*(Uy-Wy));
-    double t = 0.0, t1 = 10.0;
-    double x[2] = { 0.0, Upredkosc*cos(Ukat) };
-    double y[2] = { 0.0, Upredkosc*sin(Ukat) };
-    int j;
+    double par[5] = {k, Ux, Uy, Wx, Wy};
+    double t = 0.0;
+    double x[2] = { 20, Upredkosc*cos(Ukat)};
+    double y[2] = { 20, Upredkosc*sin(Ukat)};
 
         gsl_odeiv2_system sysX = {funcX, jacX, 2, &par};
         gsl_odeiv2_driver * X = gsl_odeiv2_driver_alloc_y_new(&sysX, gsl_odeiv2_step_rk8pd,1e-6, 1e-6, 0.0);
@@ -131,32 +128,44 @@ int main (void)
         gsl_odeiv2_system sysY = {funcY, jacY, 2, &par};
         gsl_odeiv2_driver * Y = gsl_odeiv2_driver_alloc_y_new(&sysY, gsl_odeiv2_step_rk8pd,1e-6, 1e-6, 0.0);
 
+
+
+    std::fstream plik;
+    plik.open( "nazwa_pliku.txt", std::ios::out );
+    if( plik.good() == true )
+    {
+        std::cout << "Uzyskano dostep do pliku!" << std::endl;
+    }
+    else std::cout << "Dostep do pliku zostal zabroniony!" << std::endl;
+
+
+
   for (int i = 1; i <= 10000; i++)
     {
 
-        int s= gsl_odeiv2_driver_apply_fixed_step(X,&t,1e-5,1000,x);
+        int s= gsl_odeiv2_driver_apply_fixed_step(X,&t,1e-5,100,x);
         par[1]=x[1];
-        par[5]=-par[0]*(par[1]-par[3])*(par[1]-par[3])/sqrt((par[1]-par[3])*(par[1]-par[3])+(par[2]-par[4])*(par[2]-par[4]))-par[0]*sqrt((par[1]-par[3])*(par[1]-par[3])+(par[2]-par[4])*(par[2]-par[4]));
-        par[6]=-par[0]*(par[2]-par[4])*(par[2]-par[4])/sqrt((par[1]-par[3])*(par[1]-par[3])+(par[2]-par[4])*(par[2]-par[4]))-par[0]*sqrt((par[1]-par[3])*(par[1]-par[3])+(par[2]-par[4])*(par[2]-par[4]));
+
         if (s != GSL_SUCCESS)
         {
           printf ("error: driver returned %d\n", s);
           break;
         }
 
-        s= gsl_odeiv2_driver_apply_fixed_step(Y,&t,1e-5,1000,y);
+        s= gsl_odeiv2_driver_apply_fixed_step(Y,&t,1e-5,100,y);
         par[2]=y[1];
-        par[5]=-par[0]*(par[1]-par[3])*(par[1]-par[3])/sqrt((par[1]-par[3])*(par[1]-par[3])+(par[2]-par[4])*(par[2]-par[4]))-par[0]*sqrt((par[1]-par[3])*(par[1]-par[3])+(par[2]-par[4])*(par[2]-par[4]));
-        par[6]=-par[0]*(par[2]-par[4])*(par[2]-par[4])/sqrt((par[1]-par[3])*(par[1]-par[3])+(par[2]-par[4])*(par[2]-par[4]))-par[0]*sqrt((par[1]-par[3])*(par[1]-par[3])+(par[2]-par[4])*(par[2]-par[4]));
+
         if (s != GSL_SUCCESS)
         {
             printf ("error: driver returned %d\n", s);
             break;
         }
 
+        if(y[0]<=0) break;
 
-    std::cout<<t<<" "<<y[0]<<" "<<y[1]<<" "<<x[0]<<" "<<x[1]<<"\n";
-    if(y[0]<0){j=i;break;}
+
+    plik<<t<<" "<<y[0]<<" "<<y[1]<<" "<<x[0]<<" "<<x[1]<<"\n";
+
     }
    gsl_odeiv2_driver_free (Y);
 
